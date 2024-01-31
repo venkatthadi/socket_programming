@@ -19,7 +19,7 @@ int main(int argc, char *argv[]){
   int sockfd, port, n;
   char buffer[1024];
   struct sockaddr_in serv_addr;
-  struct hostent *server;
+  struct hostent *server; // stores information about the host
   time_t t;
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
   }
   printf("[+]socket created\n");
 
-  server = gethostbyname(argv[1]);
+  server = gethostbyname(argv[1]); //get the details of host
   if(server == NULL){
     fprintf(stderr, "No such host\n");
     exit(0);
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]){
 
   port = atoi(argv[2]);
   // bzero((char *)&serv_addr, sizeof(serv_addr));
-  memset(&serv_addr, '\0', sizeof(serv_addr));
+  memset(&serv_addr, '\0', sizeof(serv_addr)); //initialize serv_addr to NULL to further assign values.
   serv_addr.sin_family = AF_INET;
   //bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h.length);
   strncpy((char *)server->h_addr,(char *)&serv_addr.sin_addr.s_addr, server->h_length);
