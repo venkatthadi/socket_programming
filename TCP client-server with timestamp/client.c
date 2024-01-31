@@ -70,7 +70,6 @@ int main(int argc, char *argv[]){
 
   printf("Server: %s\n", buffer);
 
-
   close(sockfd);
 
   return 0;
