@@ -24,15 +24,15 @@ int main(int argc, char *argv[]){
 
   int yes = 1;
 
-  if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(yes)) < 0){
+  if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(yes)) < 0){ //allows reuse of local address and port
     perror("setsockopt");
     exit(0);
   }
 
   memset(&addr, '\0', sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(PORT);
-  addr.sin_addr.s_addr = inet_ntop("127.0.0.1");
+  addr.sin_family = AF_INET; //IPv4
+  addr.sin_port = htons(PORT); //convert host byte order to network byte order
+  addr.sin_addr.s_addr = inet_ntop("127.0.0.1"); //converts address that is in string to binary
   // addr.sin_addr.s_addr = INADDR_ANY;
 
   if(bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0){
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]){
   }
   printf("[+]client accepted.\n");
 
-  n = read(newsockfd, buffer, 1023);
+  n = recv(newsockfd, buffer, 1023, 0);
   printf("%s\n", buffer);
 
   send(newsockfd, hello, strlen(hello), 0);
