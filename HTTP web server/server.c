@@ -11,10 +11,9 @@
 
 int main(int argc, char *argv[]){
   int sockfd, newsockfd, n;
-  struct sockaddr_in addr;
-  socklen_t addr_len = sizeof(addr);
+  struct sockaddr_in serv_addr;
+  socklen_t addr_len = sizeof(serv_addr);
   char buffer[1024];
-  char *hello = "Server: Hello..!";
 
   if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
     perror("Server: socket");
@@ -29,13 +28,13 @@ int main(int argc, char *argv[]){
     exit(0);
   }
 
-  memset(&addr, '\0', sizeof(addr));
-  addr.sin_family = AF_INET; //IPv4
-  addr.sin_port = htons(PORT); //convert host byte order to network byte order
-  addr.sin_addr.s_addr = inet_ntop("127.0.0.1"); //converts address that is in string to binary
+  memset(&serv_addr, '\0', sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET; //IPv4
+  serv_addr.sin_port = htons(PORT); //convert host byte order to network byte order
+  serv_addr.sin_addr.s_addr = inet_ntop("127.0.0.1"); //converts address that is in string to binary
   // addr.sin_addr.s_addr = INADDR_ANY;
 
-  if(bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0){
+  if(bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
     perror("Server: bind failed");
     exit(0);
   }
@@ -47,15 +46,16 @@ int main(int argc, char *argv[]){
   }
   printf("[+]listening...\n");
 
-  if((newsockfd = accept(sockfd, (struct sockaddr *)&addr, &addr_len)) < 0){
+  if((newsockfd = accept(sockfd, (struct sockaddr *)&serv_addr, &addr_len)) < 0){
     perror("Server: accept");
     exit(0);
   }
   printf("[+]client accepted.\n");
 
   n = recv(newsockfd, buffer, 1023, 0);
-  printf("%s\n", buffer);
+  // printf("%s\n", buffer);
 
+  char *hello = "Server: Hello..!";
   send(newsockfd, hello, strlen(hello), 0);
   printf("[+]message sent.\n");
 
