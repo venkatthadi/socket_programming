@@ -12,15 +12,18 @@
 
 void send_file(int sockfd, const char *file_path){
   FILE *fp = fopen(file_path, "r");
+  char *err = "404 - file not found...";
+
   if(!fp){
-    perror("file not opening");
+    send(sockfd, err, strlen(err), 0);
+    fclose(fp);
     return;
   }
 
-  char buffer[MAX_SIZE];
+  char buffer[] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n";;
   size_t bytes;
 
-  sprintf(buffer, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+  // sprintf(buffer, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
   send(sockfd, buffer, strlen(buffer), 0);
 
   while((bytes = fread(buffer, 1, sizeof(buffer), fp)) > 0){
@@ -79,7 +82,7 @@ void handle_client(int sockfd){
   close(sockfd);
 }
 
-int main(int argc, char *argv[]){
+int main(){
   int sockfd, newsockfd;
   struct sockaddr_in serv_addr;
   socklen_t addr_len = sizeof(serv_addr);

@@ -81,7 +81,7 @@ int main(){
       //     break;
       //   }
       // }
-      const char *msg = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><body>Hello, World!</body></html>\n"; //http request
+      const char *msg = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body>Hello, World!</body></html>"; //http request
       send(newsockfd, msg, strlen(msg),0);
       close(newsockfd);
       printf("[+]client closed.\n");
