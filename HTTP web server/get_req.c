@@ -46,21 +46,21 @@ void handle_client(int sockfd){
   }
   buffer[MAX_SIZE] = '\0';
 
-  char *request_line = strtok(buffer, "\r\n");
+  char *request_line = strtok(buffer, "\r\n"); // take the first line of the request
   if (!request_line) {
       perror("Malformed request");
       close(sockfd);
       return;
   }
 
-  char *method = strtok(request_line, " ");
+  char *method = strtok(request_line, " "); // method stores the first word of request (GET)
   if (!method) {
       perror("Malformed request (method)");
       close(sockfd);
       return;
   }
 
-  char *file_path = strtok(NULL, " ");
+  char *file_path = strtok(NULL, " "); // move one word to get the file path
   if (!file_path) {
       perror("Malformed request (file path)");
       close(sockfd);

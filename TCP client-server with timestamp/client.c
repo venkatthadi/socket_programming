@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
   }
   printf("[+]socket created\n");
 
-  server = gethostbyname(argv[1]); //get the details of host
+  server = gethostbyname(argv[1]); // get the details of host
   if(server == NULL){
     fprintf(stderr, "No such host\n");
     exit(0);
@@ -37,12 +37,12 @@ int main(int argc, char *argv[]){
 
   port = atoi(argv[2]);
   // bzero((char *)&serv_addr, sizeof(serv_addr));
-  memset(&serv_addr, '\0', sizeof(serv_addr)); //initialize serv_addr to NULL to further assign values.
+  memset(&serv_addr, '\0', sizeof(serv_addr)); // initialize serv_addr to NULL to further assign values.
   serv_addr.sin_family = AF_INET;
-  //bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h.length);
+  // copy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h.length);
   strcpy((char *)server->h_addr,(char *)&serv_addr.sin_addr.s_addr);
   serv_addr.sin_port = htons(port);
-  //serv_addr.sin_addr.s_addr = inet_addr(ip);
+  // serv_addr.sin_addr.s_addr = inet_addr(ip);
 
   if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
     perror("connection failed.");

@@ -10,7 +10,7 @@
 
 #define BACKLOG 10
 
-int main(int argc, char *argv[]){ //argv[0] portnumber
+int main(int argc, char *argv[]){ // argv[0] portnumber
   char *ip = "127.0.0.1";
 
   if(argc < 2){
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]){ //argv[0] portnumber
   port = atoi(argv[1]);
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = inet_addr(ip);
-  serv_addr.sin_port = htons(port);
+  serv_addr.sin_port = htons(port); // convert to big-endian byte order
 
   if(bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
     perror("Server: bind");
