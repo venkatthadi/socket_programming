@@ -12,7 +12,7 @@
 
 void send_file(int sockfd, const char *file_path){
   FILE *fp = fopen(file_path, "r");
-  char *err = "404 - file not found...";
+  char *err = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n<html><body><h1>404: File Not Found</h1></body></html>";
 
   if(!fp){
     send(sockfd, err, strlen(err), 0);
@@ -20,7 +20,7 @@ void send_file(int sockfd, const char *file_path){
     return;
   }
 
-  char buffer[] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n";;
+  char buffer[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
   size_t bytes;
 
   // sprintf(buffer, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
@@ -36,6 +36,12 @@ void send_file(int sockfd, const char *file_path){
   fclose(fp);
 }
 
+void handle_post_request(int sockfd, char *body){
+    printf("Received POST data: %s\n", body);
+    const char *response = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHello World"; // Send an HTTP response back to the client
+    send(sockfd, response, strlen(response), 0);
+}
+
 void handle_client(int sockfd){
   char buffer[MAX_SIZE];
   int n;
@@ -45,6 +51,7 @@ void handle_client(int sockfd){
     exit(0);
   }
   buffer[MAX_SIZE] = '\0';
+  printf("[+]request-\n%s\n",buffer);
 
   char *request_line = strtok(buffer, "\r\n"); // take the first line of the request
   if (!request_line) {
@@ -60,26 +67,31 @@ void handle_client(int sockfd){
       return;
   }
 
-  char *file_path = strtok(NULL, " "); // move one word to get the file path
-  if (!file_path) {
-      perror("Malformed request (file path)");
+  if (strcmp(method, "GET") == 0) {
+      char *file_path = strtok(NULL, " "); // move one word to get the file path
+      if (!file_path) {
+          perror("Malformed request (file path)");
+          close(sockfd);
+          return;
+      }
+
+      if (file_path[0] == '/') {
+          file_path++;
+      }
+      send_file(sockfd, file_path);
+
       close(sockfd);
-      return;
-  }
+  } else if(strcmp(method, "POST") == 0) {
+      char *body_start = strstr(buffer, "\r\n\r\n");
+      if (body_start != NULL) {
+          // Extract the body from the request
+          char *body = body_start + 4; // Skip "\r\n\r\n"
+          printf("%s\n",body);
+          handle_post_request(sockfd, body);
+      }
 
-  if (strcmp(method, "GET") != 0) {
-      perror("Invalid request (method)");
       close(sockfd);
-      return;
   }
-
-  if (file_path[0] == '/') {
-      file_path++;
-  }
-
-  send_file(sockfd, file_path);
-
-  close(sockfd);
 }
 
 int main(){
@@ -108,7 +120,7 @@ int main(){
     perror("server: bind");
     exit(0);
   }
-  printf("[+]bind successful.\n");
+  printf("[+]bind to port - %d.\n",PORT);
 
   if(listen(sockfd, BACKLOG) < 0){
     perror("server: listen");

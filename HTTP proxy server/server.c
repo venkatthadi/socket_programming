@@ -55,6 +55,7 @@ int main(){
         }
         printf("[+]client accepted.\n");
 
+        bzero(buffer, MAX_SIZE);
         if((n = recv(newsockfd, buffer, MAX_SIZE, 0)) < 0){ // receive HTTP request of client through proxy
             perror("server: recv");
             break;

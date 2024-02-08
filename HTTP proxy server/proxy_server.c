@@ -15,6 +15,7 @@ void handle_client(int client_sock){
     char buffer[MAX_SIZE];
     int n;
 
+    bzero(buffer, MAX_SIZE);
     if((n = recv(client_sock, buffer, MAX_SIZE, 0)) < 0){ // receive the HTTP request from client
         perror("server: recv");
         close(client_sock);
@@ -22,7 +23,7 @@ void handle_client(int client_sock){
     }
     printf("[+]request received.\n");
 
-    // destination server
+    // destination server : 8888
     int server_sock = socket(AF_INET, SOCK_STREAM, 0);
     if(server_sock < 0){
         perror("server_sock");
@@ -51,6 +52,7 @@ void handle_client(int client_sock){
     }
     printf("[+]HTTP request sent to server.\n");
 
+    bzero(buffer, MAX_SIZE);
     if((n = recv(server_sock, buffer, MAX_SIZE, 0)) >= 0){ // receive response from destination server
         buffer[n] = '\0';
         if(send(client_sock, buffer, n, 0) < 0){ // send HTTP response to client
