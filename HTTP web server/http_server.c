@@ -54,6 +54,9 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    int yes = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(yes));
+
     // Bind socket to port
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;

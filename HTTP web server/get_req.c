@@ -8,7 +8,7 @@
 
 #define PORT 8080
 #define BACKLOG 20
-#define MAX_SIZE 1024
+#define MAX_SIZE 10240
 
 void send_file(int sockfd, const char *file_path){
   FILE *fp = fopen(file_path, "r");
@@ -79,8 +79,6 @@ void handle_client(int sockfd){
           file_path++;
       }
       send_file(sockfd, file_path);
-
-      close(sockfd);
   } else if(strcmp(method, "POST") == 0) {
       char *body_start = strstr(buffer, "\r\n\r\n");
       if (body_start != NULL) {
@@ -89,9 +87,8 @@ void handle_client(int sockfd){
           printf("%s\n",body);
           handle_post_request(sockfd, body);
       }
-
-      close(sockfd);
   }
+  close(sockfd);
 }
 
 int main(){
