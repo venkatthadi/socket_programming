@@ -6,9 +6,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #define PROXY_PORT 8080
-#define MAX_SIZE 1024
+#define MAX_SIZE 10240
 #define BACKLOG 10
 
 int main(){
@@ -63,15 +64,24 @@ int main(){
         printf("[+]request received.\n");
 
         char *host = strstr(buffer, "Host: ");
+        // char *host_site;
+        sscanf(host, "Host: %s", host);
         if(!host){
             perror("invalid request");
             exit(0);
             // break;
         }
-        printf("request - %s\n", host + 6);
+        printf("request - %s\n", host);
 
         struct hostent *server;
         struct sockaddr_in serv_addr;
+        int serv_sockfd;
+
+        if((serv_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+            perror("server: socket");
+            exit(0);
+        }
+        printf("[+]server socket created.\n");
 
         // remote server
         server = gethostbyname(host);
@@ -80,19 +90,36 @@ int main(){
             exit(0);
             // break;
         }
+        printf("%s\n", server->h_addr);
 
         memset(&serv_addr, '\0', sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
         serv_addr.sin_addr.s_addr = inet_addr(server->h_addr);
         serv_addr.sin_port = htons(80);
 
+        if(connect(serv_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
+            perror("server: connect");
+            exit(0);
+        }
+        printf("[+]server connected.\n");
 
+        send(serv_sockfd, buffer, strlen(buffer), 0);
+        printf("[+]request sent to server.\n");
 
-        // send(newsockfd, msg, strlen(msg), 0);
+        char response[MAX_SIZE];
+        bzero(response, MAX_SIZE);
+        bytes_received = recv(serv_sockfd, response, MAX_SIZE, 0);
+        response[bytes_received] = '\0';
+        printf("[+]response received from server.\n");
+
+        send(newsockfd, response, strlen(response), 0);
+        printf("[+]response forwarded to client.\n");
 
         // handle_client(newsockfd);
+        close(serv_sockfd);
+        printf("[+]closed server.\n");
         close(newsockfd);
-        printf("[+]closed client/\n");
+        printf("[+]closed client.\n");
     // }
     close(sockfd);
 
