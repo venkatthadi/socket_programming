@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <fcntl.h>
 
 #define PORT 8080
 #define BACKLOG 20
@@ -37,8 +38,7 @@ void send_file(int sockfd, const char *file_path){
 }
 
 void handle_post_request(int sockfd, char *body){
-    printf("Received POST data: %s\n", body);
-    const char *response = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\n\r\nHello World"; // Send an HTTP response back to the client
+    char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body>Received</body></html>";
     send(sockfd, response, strlen(response), 0);
 }
 
@@ -51,9 +51,12 @@ void handle_client(int sockfd){
     exit(0);
   }
   buffer[MAX_SIZE] = '\0';
-  printf("[+]request-\n%s\n",buffer);
+  // printf("[+]request-\n%s\n",buffer);
 
-  char *request_line = strtok(buffer, "\r\n"); // take the first line of the request
+  char *msg = buffer;
+  char *body = strstr(buffer, "\r\n\r\n");
+
+  char *request_line = strtok(msg, "\r\n"); // take the first line of the request
   if (!request_line) {
       perror("Malformed request");
       close(sockfd);
@@ -74,19 +77,22 @@ void handle_client(int sockfd){
           close(sockfd);
           return;
       }
-
-      if (file_path[0] == '/') {
+      if(file_path[0] == '/'){
           file_path++;
       }
+
       send_file(sockfd, file_path);
-  } else if(strcmp(method, "POST") == 0) {
-      char *body_start = strstr(buffer, "\r\n\r\n");
-      if (body_start != NULL) {
+  } else if(strcmp(method, "POST") == 0){
+      // printf("[+]POST REQ- \n
+      // printf("%s\n", body + 4);
+      if (body != NULL) {
+          // body += 4;
           // Extract the body from the request
-          char *body = body_start + 4; // Skip "\r\n\r\n"
-          printf("%s\n",body);
+          printf("[+]body of POST request- %s\n",body);
           handle_post_request(sockfd, body);
+          // printf("[+]In loop\n");
       }
+      // printf("[+]In loop\n");
   }
   close(sockfd);
 }
