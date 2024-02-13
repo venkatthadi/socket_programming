@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 
 #define PROXY_PORT 8080
-#define MAX_SIZE 10240
+#define MAX_SIZE 4096
 #define BACKLOG 10
 
 int main(){
@@ -48,7 +48,7 @@ int main(){
     printf("[+]listening...\n");
 
     cli_len = sizeof(client_addr);
-    // while(1){
+    while(1){
         if((newsockfd = accept(sockfd, (struct sockaddr *)&client_addr, &cli_len)) < 0){ // accept the client connection
             perror("server: client socket");
             exit(0);
@@ -57,19 +57,21 @@ int main(){
 
         int bytes_received;
         char buffer[MAX_SIZE];
+        char newbuffer[MAX_SIZE];
 
         bzero(buffer, MAX_SIZE);
         bytes_received = recv(newsockfd, buffer, MAX_SIZE, 0);
-        printf("%s\n",buffer);
+        // printf("%s\n",buffer);
         printf("[+]request received.\n");
+        strcpy(newbuffer, buffer);
 
         char *host = strstr(buffer, "Host: ");
         // char *host_site;
         sscanf(host, "Host: %s", host);
         if(!host){
             perror("invalid request");
-            exit(0);
-            // break;
+            // exit(0);
+            break;
         }
         printf("request - %s\n", host);
 
@@ -87,15 +89,30 @@ int main(){
         server = gethostbyname(host);
         if(server == NULL){
             perror("no such host");
-            exit(0);
-            // break;
+            // exit(0);
+            break;
         }
-        printf("%s\n", server->h_addr);
+
+        // char **addr;
+        // for (addr = server->h_addr_list; *addr != NULL; addr++) {
+        //     printf("%s ", inet_ntoa(*(struct in_addr *) *addr));
+        // }
+        // printf("\n");
 
         memset(&serv_addr, '\0', sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_addr.s_addr = inet_addr(server->h_addr);
+        // strcpy((char *)server->h_addr,(char *)&serv_addr.sin_addr.s_addr);
         serv_addr.sin_port = htons(80);
+        struct in_addr **addr_list = (struct in_addr **)server->h_addr_list;
+        if (addr_list[0] != NULL){
+            serv_addr.sin_addr = *addr_list[0];
+        } else{
+            perror("host address not found");
+            exit(1);
+        }
+        char ip_address[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(serv_addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+        printf("Server IP Address: %s\n", ip_address);
 
         if(connect(serv_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
             perror("server: connect");
@@ -103,16 +120,24 @@ int main(){
         }
         printf("[+]server connected.\n");
 
+        // printf("%s\n",newbuffer);
         send(serv_sockfd, buffer, strlen(buffer), 0);
         printf("[+]request sent to server.\n");
 
         char response[MAX_SIZE];
         bzero(response, MAX_SIZE);
-        bytes_received = recv(serv_sockfd, response, MAX_SIZE, 0);
+        if((bytes_received = recv(serv_sockfd, response, MAX_SIZE, 0)) < 0){
+                perror("receiving response");
+                break;
+        }
         response[bytes_received] = '\0';
         printf("[+]response received from server.\n");
+        printf("%s\n",response);
 
-        send(newsockfd, response, strlen(response), 0);
+        if(send(newsockfd, response, strlen(response), 0) < 0){
+            perror("sending response");
+            break;
+        }
         printf("[+]response forwarded to client.\n");
 
         // handle_client(newsockfd);
@@ -120,7 +145,7 @@ int main(){
         printf("[+]closed server.\n");
         close(newsockfd);
         printf("[+]closed client.\n");
-    // }
+    }
     close(sockfd);
 
     return 0;
