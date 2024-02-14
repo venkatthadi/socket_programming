@@ -46,7 +46,7 @@ int main(){
     }
     printf("[+]listening...\n");
 
-    char *msg = "hello, from destination server!";
+    char *msg = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body>hello, from destination server!</body></html>";
     cli_len = sizeof(client_addr);
     while(1){
         if((newsockfd = accept(sockfd, (struct sockaddr *)&client_addr, &cli_len)) < 0){ // accept connection from proxy

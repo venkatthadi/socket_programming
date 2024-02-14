@@ -1,16 +1,99 @@
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <arpa/inet.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<errno.h>
+#include<netinet/in.h>
+#include<sys/socket.h>
+#include<sys/types.h>
+#include<error.h>
+#include<arpa/inet.h>
+#include<netdb.h>
+#include<unistd.h>
 
 #define PROXY_PORT 8080
-#define MAX_SIZE 4096
+#define MAX_SIZE 65536
 #define BACKLOG 10
+
+// void handle_client(int client_sockfd, char *port){
+//     char request[MAX_SIZE], host[MAX_SIZE], response[MAX_SIZE];
+//     int server_sockfd, i, j, k = 0, n;
+//     size_t r;
+//     struct addrinfo *hserv, hints, *p;
+//     memset(request, 0, sizeof(request));
+//
+//     if((r = read(client_sockfd, request, MAX_SIZE)) > 0){
+//         printf("[+]request - \n%s\n", request);
+//
+//         memset(&host, '\0', strlen(host));
+//         for(i = 0; i < sizeof(request)-2; i++){
+//             if(request[i] == '/' && request[i + 1] == '/'){
+//                 k = i + 2;
+//                 for(j = 0; request[k] != '/'; j++){
+//                     host[j] = request[k];
+//                     k++;
+//                 }
+//                 host[j] = '\0';
+//                 break;
+//             }
+//         }
+//
+//         char* portchr = strstr(host, ":");
+//         if(portchr != NULL){
+//             *portchr = '\0';
+//             port = portchr + 1;
+//         }
+//         printf("[+]server name : %s.\n", host);
+//         printf("[+]port : %s.\n", port);
+//
+//         memset(&hints, '\0', sizeof(hints));
+//         hints.ai_family = AF_UNSPEC;
+//         hints.ai_socktype = SOCK_STREAM;
+//         if((n = getaddrinfo(host, port, &hints, &hserv)) != 0){
+//             perror("getaddrinfo");
+//             exit(0);
+//         }
+//         for(p = hserv; p != NULL; p = p->ai_next){
+//             if((server_sockfd = socket(p->ai_family, p->ai_socktype, 0)) < 0){
+//                 perror("server socket");
+//                 continue;
+//             }
+//             if(connect(server_sockfd, p->ai_addr, p->ai_addrlen) < 0){
+//                 close(server_sockfd);
+//                 perror("server connect");
+//                 continue;
+//             }
+//             break;
+//         }
+//         if(p == NULL){
+//             printf("not connected.\n");
+//             exit(0);
+//         }
+//         printf("[+]connected to remote server.\n");
+//
+//         if(send(server_sockfd, request, MAX_SIZE, 0) < 0){
+//             perror("send error");
+//             exit(0);
+//         }
+//         printf("[+]request sent to remote server.\n");
+//
+//         int bytes_received = 0;
+//         // if((bytes_received = recv(serv_sockfd, response, MAX_SIZE, 0)) < 0){
+//         //     perror("server recv");
+//         //     exit(0);
+//         // }
+//         // print("[+]response received from remote server.\n");
+//         memset(&response, '\0', sizeof(response));
+//         while((bytes_received = recv(server_sockfd, response, MAX_SIZE, 0)) > 0){
+//             // printf("%s\n", response);
+//             send(client_sockfd, response, bytes_received, 0);
+//         }
+//
+//         close(server_sockfd);
+//         printf("[+]server closed.\n");
+//     }
+//     close(client_sockfd);
+//     printf("[+]client closed.\n");
+// }
 
 int main(){
     int sockfd, newsockfd;
@@ -55,6 +138,8 @@ int main(){
         }
         printf("[+]client accepted.\n");
 
+        // handle_client(newsockfd, "80");
+
         int bytes_received;
         char buffer[MAX_SIZE];
         char newbuffer[MAX_SIZE];
@@ -62,7 +147,7 @@ int main(){
         bzero(buffer, MAX_SIZE);
         bytes_received = recv(newsockfd, buffer, MAX_SIZE, 0);
         // printf("%s\n",buffer);
-        printf("[+]request received.\n");
+        printf("[+]request received bytes - %d.\n", bytes_received);
         strcpy(newbuffer, buffer);
 
         char *host = strstr(buffer, "Host: ");
@@ -120,8 +205,12 @@ int main(){
         }
         printf("[+]server connected.\n");
 
-        // printf("%s\n",newbuffer);
-        send(serv_sockfd, buffer, strlen(buffer), 0);
+        printf("%s\n",newbuffer);
+        if(send(serv_sockfd, newbuffer, MAX_SIZE, 0) < 0){
+            perror("sending request");
+            break;
+            // exit(0);
+        }
         printf("[+]request sent to server.\n");
 
         char response[MAX_SIZE];
@@ -129,24 +218,27 @@ int main(){
         if((bytes_received = recv(serv_sockfd, response, MAX_SIZE, 0)) < 0){
                 perror("receiving response");
                 break;
+                // exit(0);
         }
-        response[bytes_received] = '\0';
-        printf("[+]response received from server.\n");
+        // response[bytes_received] = '\0';
+        printf("[+]response received from server bytes - %d.\n", bytes_received);
         printf("%s\n",response);
 
-        if(send(newsockfd, response, strlen(response), 0) < 0){
+        if(send(newsockfd, response, bytes_received, 0) < 0){
             perror("sending response");
             break;
+            // exit(0);
         }
         printf("[+]response forwarded to client.\n");
 
         // handle_client(newsockfd);
-        close(serv_sockfd);
-        printf("[+]closed server.\n");
         close(newsockfd);
         printf("[+]closed client.\n");
+        close(serv_sockfd);
+        printf("[+]closed server.\n");
     }
     close(sockfd);
+    printf("[+]proxy closed.\n");
 
     return 0;
 }
