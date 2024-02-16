@@ -97,9 +97,9 @@ void handle_client(int client_sockfd){
             perror("host address not found");
             exit(1);
         }
-        char ip_address[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &(serv_addr.sin_addr), ip_address, INET_ADDRSTRLEN);
-        printf("Server IP Address: %s\n", ip_address);
+        // char ip_address[INET_ADDRSTRLEN];
+        // inet_ntop(AF_INET, &(serv_addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+        // printf("Server IP Address: %s\n", ip_address);
 
         if(connect(server_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
             perror("server: connect");
@@ -151,9 +151,9 @@ void handle_client(int client_sockfd){
             perror("host address not found");
             exit(0);
         }
-        char ip_address[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &(serv_addr.sin_addr), ip_address, INET_ADDRSTRLEN);
-        printf("Server IP Address: %s\n", ip_address);
+        // char ip_address[INET_ADDRSTRLEN];
+        // inet_ntop(AF_INET, &(serv_addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+        // printf("Server IP Address: %s\n", ip_address);
 
         if(connect(serv_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
             perror("server: connect");
