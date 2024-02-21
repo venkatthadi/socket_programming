@@ -6,34 +6,12 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <openssl/sha.h>
-#include <openssl/evp.h>
 
 #define PORT 8080
 #define BACKLOG 10
 #define MAX_SIZE 65536
 
 char *GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"; //global unique identifier
-
-void sha1_hash(char *str, unsigned char *buffer){
-    EVP_MD_CTX *mdctx;
-    const EVP_MD *md;
-    int i;
-    unsigned int outputLength;
-
-    // Create a new message digest context
-    mdctx = EVP_MD_CTX_new();
-    if (mdctx == NULL) {
-        printf("Error creating EVP_MD_CTX\n");
-        exit(EXIT_FAILURE);
-    }
-
-    md = EVP_sha1();
-    EVP_DigestInit_ex(mdctx, md, NULL);
-    EVP_DigestUpdate(mdctx, str, strlen(str));
-    EVP_DigestFinal_ex(mdctx, outputBuffer, &outputLength);
-
-    EVP_MD_CTX_free(mdctx);
-}
 
 void handle_client(int cli_sockfd){
     char buffer[MAX_SIZE];
