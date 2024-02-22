@@ -6,12 +6,47 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <openssl/sha.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/buffer.h>
+#include <stdint.h>
 
 #define PORT 8080
 #define BACKLOG 10
 #define MAX_SIZE 65536
 
 char *GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"; //global unique identifier
+
+void Base64Encode(char *client_key, char *accept_key) { //Encodes a binary safe base 64 string
+    char combined_key[1024];
+    strcpy(combined_key, client_key);
+    strcat(combined_key, GUID);
+
+    unsigned char sha1_hash[SHA_DIGEST_LENGTH];
+    SHA1((unsigned char *)combined_key, strlen(combined_key), sha1_hash);
+
+    BIO *b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+
+    BIO *bio = BIO_new(BIO_s_mem());
+    BIO_push(b64, bio);
+
+    BIO_write(b64, sha1_hash, SHA_DIGEST_LENGTH);
+    BIO_flush(b64);
+
+    BUF_MEM *bptr;
+    BIO_get_mem_ptr(b64, &bptr);
+
+    strcpy(accept_key, bptr->data);
+
+
+    size_t len = strlen(accept_key);
+    if (len > 0 && accept_key[len - 1] == '\n') {
+        accept_key[len - 1] = '\0';
+    }
+
+    BIO_free_all(b64);
+}
 
 void handle_client(int cli_sockfd){
     char buffer[MAX_SIZE];
@@ -20,17 +55,25 @@ void handle_client(int cli_sockfd){
     bzero(buffer, MAX_SIZE);
     if((bytes_received = recv(cli_sockfd, buffer, MAX_SIZE, 0)) < 0){
         perror("server: recv");
-        continue;
+        return;
     }
     printf("[+]request received.\n");
+    printf("request - \n%s\n", buffer);
 
-    char *key = strstr(buffer, "Sec-websocket-key: ");
-    sscanf(key, "Sec-websocket-key: ", key);
-    strcat(key, GUID); //concat guid to the websocket key
+    //prepare response
+    char *key = strstr(buffer, "Sec-WebSocket-Key: ");
+    char websoc_key[MAX_SIZE];
+    memset(&websoc_key, '\0', MAX_SIZE);
+    sscanf(key, "Sec-WebSocket-Key: %s", websoc_key);
+    printf("[+]key - %s\n", websoc_key);
 
-    sha1_hash(key);
+    char hash[1024];
+    Base64Encode(websoc_key, hash);
 
-
+    char response[MAX_SIZE];
+    sprintf(response, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n", hash);
+    send(cli_sockfd, response, strlen(response), 0);
+    printf("[+]handshake established\n");
 
 }
 
@@ -76,5 +119,15 @@ int main(){
         printf("[+]client accepted.\n");
 
         handle_client(cli_sockfd);
+
+        char message[MAX_SIZE];
+        bzero(message, MAX_SIZE);
+        recv(cli_sockfd, message, MAX_SIZE, 0);
+        printf("[+]received message - %s\n", message);
+
+        close(cli_sockfd);
+        printf("[+]client closed.\n");
     }
+    close(serv_sockfd);
+    printf("[+]server closed.\n");
 }
