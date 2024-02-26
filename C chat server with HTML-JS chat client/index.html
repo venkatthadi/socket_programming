@@ -1,41 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chat App</title>
+    <title>WebSocket Client</title>
 </head>
 <body>
-    <div id="chat"></div>
-    <input type="text" id="message" placeholder="Type your message...">
-    <button id="sendButton">Send</button>
+    <div id="messages"></div>
 
     <script>
-        const socket = new WebSocket("ws://localhost:8080");
-        const sendButton = document.getElementById("sendButton");
+        const webSocket = new WebSocket("ws://localhost:8080"); // Replace "localhost:8080" with your server address
 
-        socket.onopen = function(event) {
-            console.log("WebSocket connection established.");
-            sendButton.disabled = false; // Enable send button once the connection is established
+        webSocket.onopen = function(event) {
+            console.log("WebSocket connection established");
         };
 
-        socket.onmessage = function(event) {
-            displayMessage(event.data);
+        webSocket.onmessage = function(event) {
+            console.log("Message received:", event.data);
+            // addMessage(event.data); // Call a function to display the message on the webpage
         };
-
-        function sendMessage() {
-            const messageInput = document.getElementById("message");
-            const message = messageInput.value;
-            socket.send(message);
-            messageInput.value = "";
-        }
-
-        function displayMessage(message) {
-            const chatDiv = document.getElementById("chat");
-            const messageElement = document.createElement("div");
-            messageElement.textContent = message;
-            chatDiv.appendChild(messageElement);
-        }
-
-        sendButton.onclick = sendMessage; // Assign the sendMessage function to the button's click event
     </script>
 </body>
 </html>

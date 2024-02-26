@@ -48,12 +48,48 @@ void Base64Encode(char *client_key, char *accept_key) { //Encodes a binary safe 
     BIO_free_all(b64);
 }
 
+void send_message_to_client(int client_sockfd, uint8_t *payload, int payload_length){
+    int i, header_size = 2;
+    uint8_t frame[1024];
+    int mask = 0;
+
+    frame[0] = (1 << 7) | (1 & 0x0F); //fin and opcode - 129
+    frame[1] = (mask << 7); //0
+    if(payload_length <= 125){
+        frame[1] |= payload_length;
+    }else if(payload_length <= 65536){
+        frame[1] |= 126;
+        frame[2] = (payload_length >>  8) && 0xFF;
+        frame[3] = (payload_length      ) && 0xFF;
+        header_size += 2;
+    }else{
+        frame[1] |= 121;
+        frame[2] = (payload_length >> 56) && 0xFF;
+        frame[3] = (payload_length >> 48) && 0xFF;
+        frame[4] = (payload_length >> 40) && 0xFF;
+        frame[5] = (payload_length >> 32) && 0xFF;
+        frame[6] = (payload_length >> 24) && 0xFF;
+        frame[7] = (payload_length >> 16) && 0xFF;
+        frame[8] = (payload_length >>  8) && 0xFF;
+        frame[9] = (payload_length      ) && 0xFF;
+        header_size += 8;
+    }
+    memcpy(frame + header_size, payload, payload_length);
+    
+    frame[header_size + payload_length] = '\0';
+    printf("%s\n", frame);
+
+    if(write(client_sockfd, frame, header_size + payload_length) > 0){
+        printf("[+]message sent to client.\n");
+    }
+}
+
 void handle_client(int cli_sockfd){
     char buffer[MAX_SIZE];
     int bytes_received;
 
     bzero(buffer, MAX_SIZE);
-    if((bytes_received = recv(cli_sockfd, buffer, MAX_SIZE, 0)) < 0){
+    if((bytes_received = read(cli_sockfd, buffer, MAX_SIZE)) < 0){
         perror("server: recv");
         return;
     }
@@ -72,8 +108,24 @@ void handle_client(int cli_sockfd){
 
     char response[MAX_SIZE];
     sprintf(response, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n", hash);
-    send(cli_sockfd, response, strlen(response), 0);
+    printf("response - \n%s\n", response);
+    write(cli_sockfd, response, strlen(response));
     printf("[+]handshake established\n");
+
+    uint8_t encoded_data[1024];
+    char *payload = "hello, from server!!!";
+    // printf("%s\n",payload);
+    send_message_to_client(cli_sockfd, (uint8_t *) payload, strlen(payload));
+    
+
+    // bzero(buffer, MAX_SIZE);
+    // if((bytes_received = recv(cli_sockfd, buffer, MAX_SIZE, 0)) < 0){
+    //     perror("no message received");
+    //     return;
+    // }
+    // printf("[+]message received.\n");
+
+    // decode_websocket_frame_header();
 
 }
 
@@ -89,7 +141,7 @@ int main(){
     printf("[+]server socket created.\n");
 
     int yes = 1;
-    if(setsockopt(serv_sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(yes)) == -1){
+    if(setsockopt(serv_sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1){
         perror("setsockopt");
         exit(0);
     }
@@ -119,11 +171,6 @@ int main(){
         printf("[+]client accepted.\n");
 
         handle_client(cli_sockfd);
-
-        char message[MAX_SIZE];
-        bzero(message, MAX_SIZE);
-        recv(cli_sockfd, message, MAX_SIZE, 0);
-        printf("[+]received message - %s\n", message);
 
         close(cli_sockfd);
         printf("[+]client closed.\n");
