@@ -4,6 +4,8 @@
     <title>WebSocket Client</title>
 </head>
 <body>
+    <input type="text" id="messageInput" placeholder="Enter message...">
+    <button onclick="sendMessage()">Send</button>
     <div id="messages"></div>
 
     <script>
@@ -15,8 +17,18 @@
 
         webSocket.onmessage = function(event) {
             console.log("Message received:", event.data);
-            // addMessage(event.data); // Call a function to display the message on the webpage
+            document.getElementById('messages').innerHTML = event.data;
         };
+
+        function sendMessage(){
+            const message = document.getElementById('messageInput').value;
+            webSocket.send(message);
+            console.log("Message sent!");
+        }
+
+        webSocket.onclose = function(event) {
+            console.log("WebSocket connection closed");
+        }
     </script>
 </body>
 </html>
