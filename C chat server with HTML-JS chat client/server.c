@@ -10,12 +10,19 @@
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
 #include <stdint.h>
+#include <pthread.h> 
 
 #define PORT 8080
 #define BACKLOG 10
 #define MAX_SIZE 65536
+#define MAX_CLIENTS 100
 
 char *GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"; //global unique identifier
+//store details of clients
+struct socket_info{
+    int sockfd;
+    int user_ID;
+}clients_sockfds[MAX_CLIENTS];
 
 //Encodes a binary safe base 64 string
 void Base64Encode(char *client_key, char *accept_key) { 
@@ -49,7 +56,13 @@ void Base64Encode(char *client_key, char *accept_key) {
     BIO_free_all(b64);
 }
 
-void send_message_to_client(int client_sockfd, uint8_t *payload, int payload_length){
+void send_frame_to_client(int client_sockfd, uint8_t response[], int header_size, int payload_length){
+    if(send(client_sockfd, response, header_size + payload_length, 0) > 0){
+        printf("[+]message sent to client.\n");
+    }
+}
+
+void encode_frame_and_respond(int client_sockfd, uint8_t *payload, int payload_length){
     int header_size = 2;
     uint8_t frame[10];
     int mask = 0, fin = 1, opcode = 1;
@@ -75,9 +88,15 @@ void send_message_to_client(int client_sockfd, uint8_t *payload, int payload_len
         frame[9] = (payload_length      ) & 0xFF;
         header_size += 8;
     }
-    
-    uint8_t response[header_size + payload_length];
+
     int32_t i, respInd = 0;
+    uint8_t response[header_size + payload_length];
+
+    // if(mask){
+        //create mask
+        //add it to frame
+    // }
+    
     for(i = 0; i < header_size; i++){
         response[respInd++] = frame[i];
     }
@@ -85,9 +104,7 @@ void send_message_to_client(int client_sockfd, uint8_t *payload, int payload_len
         response[respInd++] = payload[i];
     }
 
-    if(send(client_sockfd, response, header_size + payload_length, 0) > 0){
-        printf("[+]message sent to client.\n");
-    }
+    send_frame_to_client(client_sockfd, response, header_size, payload_length);
 }
 
 void decode_websocket_frame_header(uint8_t buffer[], int buffer_length){
@@ -138,12 +155,12 @@ void recv_message_from_client(int client_sockfd){
     decode_websocket_frame_header(buffer, strlen(buffer));
 }
 
-void handle_client(int cli_sockfd){
+void handle_client(struct socket_info client_sockfd){
     char buffer[MAX_SIZE];
     int bytes_received;
 
     bzero(buffer, MAX_SIZE);
-    if((bytes_received = read(cli_sockfd, buffer, MAX_SIZE)) < 0){
+    if((bytes_received = read(client_sockfd.sockfd, buffer, MAX_SIZE)) < 0){
         perror("server: recv");
         return;
     }
@@ -164,15 +181,16 @@ void handle_client(int cli_sockfd){
     char response[MAX_SIZE];
     sprintf(response, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", hash);
     printf("response - \n%s\n", response);
-    write(cli_sockfd, response, strlen(response));
+    write(client_sockfd.sockfd, response, strlen(response));
     printf("[+]handshake established\n");
 
     uint8_t encoded_data[1024];
-    char *payload = "hello, from server!!!";
+    char payload[35];
+    sprintf(payload, "hello, from server... user - %d!!!", client_sockfd.user_ID);
     // printf("%s\n",payload);
-    send_message_to_client(cli_sockfd, (uint8_t *) payload, strlen(payload));
+    encode_frame_and_respond(client_sockfd.sockfd, (uint8_t *) payload, strlen(payload));
 
-    recv_message_from_client(cli_sockfd);
+    recv_message_from_client(client_sockfd.sockfd);
 }
 
 int main(){
@@ -209,17 +227,32 @@ int main(){
     }
     printf("[+]listening...\n");
 
+    int i;
+    for(i = 0; i < MAX_CLIENTS; i++){
+        clients_sockfds[i].sockfd = 0;
+        clients_sockfds[i].user_ID = i + 1;
+    }
     while(1){
         if((cli_sockfd = accept(serv_sockfd, (struct sockaddr *)&serv_addr, &addr_len)) < 0){
             perror(0);
             continue;
         }
+        for(i = 0; i < MAX_CLIENTS; i++){
+            if(clients_sockfds[i].sockfd == 0){
+                clients_sockfds[i].sockfd = cli_sockfd;//check for empty slot in array to store details of client
+                break;
+            }
+        }
+        if(i == MAX_CLIENTS){
+            perror("[-]max number of clients reached\n");
+            break;
+        }
         printf("[+]client accepted.\n");
 
-        handle_client(cli_sockfd);
+        handle_client(clients_sockfds[i]);
 
-        close(cli_sockfd);
-        printf("[+]client closed.\n");
+        // close(cli_sockfd);
+        // printf("[+]client closed.\n");
     }
     close(serv_sockfd);
     printf("[+]server closed.\n");
