@@ -179,7 +179,12 @@ void handle_client(struct socket_info client_sockfd){
 
     //send the response to upgrade the connection
     char response[MAX_SIZE];
-    sprintf(response, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", hash);
+    sprintf(response, 
+        "HTTP/1.1 101 Switching Protocols\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Accept: %s\r\n\r\n", 
+        hash);
     printf("response - \n%s\n", response);
     write(client_sockfd.sockfd, response, strlen(response));
     printf("[+]handshake established\n");
