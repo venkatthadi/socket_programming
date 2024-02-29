@@ -4,30 +4,53 @@
     <title>WebSocket Client</title>
 </head>
 <body>
+    <input type="text" id="userID" placeholder="Enter user name">
+    <button onclick="enterUserName()">Enter</button><br><br>
     <input type="text" id="messageInput" placeholder="Enter message...">
-    <button onclick="sendMessage()">Send</button>
-    <div id="messages"></div>
+    <button onclick="sendMessage()">Send message</button><br><br>
+    <div id="messages" style="display: none;"></div>
 
     <script>
         const webSocket = new WebSocket("ws://localhost:8080"); // Replace "localhost:8080" with your server address
+        let username;
 
         webSocket.onopen = function(event) {
             console.log("WebSocket connection established");
         };
 
-        webSocket.onmessage = function(event) {
-            console.log("Message received:", event.data);
-            document.getElementById('messages').innerHTML = event.data;
-        };
+        function enterUserName() {
+            const userNameInput = document.getElementById("userID");
+            username = userNameInput.value;
+            if(username.length === 0){
 
-        function sendMessage(){
-            const message = document.getElementById('messageInput').value;
-            webSocket.send(message);
-            console.log("Message sent!");
+            }
+            webSocket.send(username);
+            userNameInput.value = "";
+            showChat();
         }
 
-        webSocket.onclose = function(event) {
-            console.log("WebSocket connection closed");
+        function showChat(){
+            const chatsection = document.getElementById("messages");
+            chatsection.style.display = "block";
+        }
+
+        webSocket.addEventListener("message", (event) => {
+            appendMessage(event.data);
+        });
+
+        function sendMessage() {
+            const message = document.getElementById("messageInput").value;
+            webSocket.send(message);
+            console.log("Message sent!");
+            message.value = "";
+        }
+
+        function appendMessage(message) {
+            const chatArea = document.getElementById("messages");
+            const messageDiv = document.createElement("div");
+            chatArea.style.display = "block";
+            messageDiv.textContent = message;
+            chatArea.appendChild(messageDiv);
         }
     </script>
 </body>
