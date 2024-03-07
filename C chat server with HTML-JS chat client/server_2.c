@@ -346,29 +346,11 @@ void* handle_client (void* arg)
             continue;
         } 
 
-        char full_message [1136], id_str [5];
-        int id;
-		if (strchr (decoded_data, ':'))
-        {
-            int end = strchr (decoded_data, ':') - decoded_data;
-            strncpy (reciever_name, decoded_data, end);
-            reciever_name [end] = '\0';
-            
-            sprintf (full_message, "%s%s", new_client -> name, decoded_data + end);
-            send_message (full_message, connfd, reciever_name);
-        }
-        else if (strstr (decoded_data, "new_name="))
-        {
-            strcpy (new_client -> name, decoded_data + 9);
-            send_websocket_frame (new_client -> connfd, new_client -> name, 1, 1, "Updated name");
-        }
-        else
-        {
+        char full_message [1136];
             sprintf (full_message, "%s: %s", new_client -> name, decoded_data);
  
             // Broadcast the message to all clients
             broadcast_message (full_message, connfd);
-        }
     }
 
     // Notify all clients about the user leaving
