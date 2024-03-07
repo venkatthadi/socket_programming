@@ -130,7 +130,6 @@ class Server{
 
 class WebSocketServer{
         Server tcp;
-        int user_id = -1;
 
         void generate_random_mask(uint8_t *mask){
 		srand (time (NULL));
@@ -403,32 +402,22 @@ class WebSocketServer{
 
                 return process_websocket_frame (data, length, decodedData, client_socket);
         }
-
-        int getUserID (){
-                return user_id;
-        }
 };
 
 
 class Client{
-        int sockfd, user_id;
+        int sockfd;
         char name[20];
 
         public:
         void setSockFd(int sockfd){
                 this->sockfd = sockfd;
         }
-        void setUserId(int user_id){
-                this->user_id = user_id;
-        }
         void setName(char *name){
                 strcpy(this->name, name);
         }
         int getSockFd(){
                 return sockfd; 
-        }
-        int getUserId(){
-                return user_id;
         }
         char *getName(){
                 return name;
@@ -459,8 +448,6 @@ class ChatServer{
                 new_client.setSockFd(websocket.webSocketCreate());
                 if(new_client.getSockFd() == -1)
                         return -1;
-
-                new_client.setUserId(-1);
 
                 clients_mutex.lock();
                 clients[new_client.getSockFd()] = new_client;
@@ -530,7 +517,7 @@ class ChatServer{
                         char msg[100];
                         int flag;
                         char reciever_name[100];
-                        char full_message[1136], id_str[5];
+                        char full_message[1136];
                         char *decoded_data = NULL;
 
                         if ((flag = websocket.recv_websocket_frame(&decoded_data, sockfd)) == -1)
@@ -546,13 +533,9 @@ class ChatServer{
                         if (flag == 2)
                         {
                                 websocket.sendCloseFrame(sockfd);
+                                // broadcastMessage (join, sockfd);
                                 break;
                         }
-
-                        // char join [128];
-                        // sprintf (join, "%s has joined the chat.", new_client->getName());
-                        // printf ("%s\n", join);
-                        // broadcastMessage (join, sockfd);
 
                         bzero(reciever_name, 100);
 
@@ -560,16 +543,16 @@ class ChatServer{
 				int end = strchr (decoded_data, ':') - decoded_data;
 				strncpy (reciever_name, decoded_data, end);
 				reciever_name [end] = '\0';
-                                cout << reciever_name << endl;
+                                // cout << reciever_name << endl;
 				sprintf (full_message, "%s%s", new_client->getName(), decoded_data + end);
-                                cout << full_message << endl;
+                                // cout << full_message << endl;
 				sendMessage (full_message, sockfd, reciever_name);
 			} 
-			else if (strstr (decoded_data, "new_name=")){
-				strcpy (new_client -> getName(), decoded_data + 9);
-                                char reply[] = "Updated name";
-				websocket.send_websocket_frame(new_client->getSockFd(), 1, 1, reply);
-			} 
+			// else if (strstr (decoded_data, "new_name=")){
+			// 	strcpy (new_client -> getName(), decoded_data + 9);
+                        //         char reply[] = "Updated name";
+			// 	websocket.send_websocket_frame(new_client->getSockFd(), 1, 1, reply);
+			// } 
 			else {
 				sprintf (full_message, "%s: %s", new_client->getName(), decoded_data);
 				// Broadcast the message to all clients
@@ -577,16 +560,12 @@ class ChatServer{
 			}
                 }
 
-                if (new_client -> getUserId () != -1){
                 // Notify all clients about the user leaving
                 char message [1000];
-
-                sprintf (message, "%s has left the chat.", new_client -> getName ());
-
+                sprintf (message, "%s has left the chat.", new_client->getName());
                 printf ("%s\n", message);
                 broadcastMessage (message, sockfd);
                 bzero (message, sizeof (message));
-                }
 
                 // Remove the disconnected client from the list
                 handleClose (sockfd);
