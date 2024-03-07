@@ -206,36 +206,33 @@ class WebSocketServer{
                 uint8_t* masking_key;
 
                 int header_size = decode_websocket_frame_header (data, &fin, &opcode, &mask, &payload_length);
-                if (header_size == -1) 
-                {
-                printf ("Error decoding WebSocket frame header\n");
-                return -1;
+                if (header_size == -1) {
+                        printf ("Error decoding WebSocket frame header\n");
+                        return -1;
                 }
                 
-                if (mask)
-                {
-                masking_key = header_size + data;
-                header_size += 2;
+                if (mask){
+                        masking_key = header_size + data;
+                        header_size += 2;
                 }
                 header_size += 2;
                 
                 size_t payload_offset = header_size; 
-                if (opcode == 0x9) 
-                {
-                handle_ping (data, length, connfd);
-                *decoded_data = NULL;
-                return 1;
+                if (opcode == 0x9) {
+                        handle_ping (data, length, connfd);
+                        *decoded_data = NULL;
+                        return 1;
                 } 
                 else if (opcode == 0x8) 
-                return 2;
+                        return 2;
 
                 *decoded_data = (char *)malloc (payload_length + 1);
                 
                 if (mask)
-                for (size_t i = 0; i < payload_length; ++i)
-                (*decoded_data) [i] = data [payload_offset + i] ^ masking_key [i % 4];
-
-                (*decoded_data) [payload_length] = '\0';
+                        for (size_t i = 0; i < payload_length; ++i)
+                                (*decoded_data) [i] = data [payload_offset + i] ^ masking_key [i % 4];
+                        (*decoded_data) [payload_length] = '\0';
+                
                 return 0;
         }
 
@@ -317,20 +314,18 @@ class WebSocketServer{
 
         void handle_websocket_upgrade (int client_socket, char *request) {
                 // Check if it's a WebSocket upgrade request
-                if (strstr (request, "Upgrade: websocket") == NULL) 
-                {
-                fprintf (stderr, "Not a WebSocket upgrade request\n");
-                return;
+                if (strstr (request, "Upgrade: websocket") == NULL) {
+                        fprintf (stderr, "Not a WebSocket upgrade request\n");
+                        return;
                 }
 
                 // Extract the value of Sec-WebSocket-Key header
                 char *key_start = strstr (request, "Sec-WebSocket-Key: ") + 19;
                 char *key_end = strstr (key_start, "\r\n");
                 
-                if (!key_start || !key_end) 
-                {
-                fprintf (stderr, "Invalid Sec-WebSocket-Key header\n");
-                return;
+                if (!key_start || !key_end) {
+                        fprintf (stderr, "Invalid Sec-WebSocket-Key header\n");
+                        return;
                 }
                 *key_end = '\0';
 
@@ -377,10 +372,9 @@ class WebSocketServer{
                 // Send the encoded message back to the client
                 ssize_t bytes_sent = tcp.sendRequest (client_socket, encoded_data, encoded_size);
 
-                if (bytes_sent == -1) 
-                {
-                perror ("Send failed");
-                return -1;
+                if (bytes_sent == -1) {
+                        perror ("Send failed");
+                        return -1;
                 }
                 return 0;
         }
@@ -492,13 +486,6 @@ class ChatServer{
                 }
         }
 
-        int checkNameExists(char *name){
-                for (auto i: clients)
-                if (strcmp (i.second.getName (), name) == 0)
-                        return 1;
-                return 0;
-        }
-
         void *handleClient(int sockfd){
                 char name[30], *decoded_name = NULL;
                 Client *new_client = &clients [sockfd];
@@ -516,7 +503,7 @@ class ChatServer{
                         char buffer[1024];
                         char msg[100];
                         int flag;
-                        char reciever_name[100];
+                        // char reciever_name[100];
                         char full_message[1136];
                         char *decoded_data = NULL;
 
@@ -537,27 +524,9 @@ class ChatServer{
                                 break;
                         }
 
-                        bzero(reciever_name, 100);
-
-			if (strchr (decoded_data, ':')){
-				int end = strchr (decoded_data, ':') - decoded_data;
-				strncpy (reciever_name, decoded_data, end);
-				reciever_name [end] = '\0';
-                                // cout << reciever_name << endl;
-				sprintf (full_message, "%s%s", new_client->getName(), decoded_data + end);
-                                // cout << full_message << endl;
-				sendMessage (full_message, sockfd, reciever_name);
-			} 
-			// else if (strstr (decoded_data, "new_name=")){
-			// 	strcpy (new_client -> getName(), decoded_data + 9);
-                        //         char reply[] = "Updated name";
-			// 	websocket.send_websocket_frame(new_client->getSockFd(), 1, 1, reply);
-			// } 
-			else {
-				sprintf (full_message, "%s: %s", new_client->getName(), decoded_data);
-				// Broadcast the message to all clients
-				broadcastMessage (full_message, sockfd);
-			}
+                        sprintf (full_message, "%s: %s", new_client->getName(), decoded_data);
+                        // Broadcast the message to all clients
+                        broadcastMessage (full_message, sockfd);
                 }
 
                 // Notify all clients about the user leaving
